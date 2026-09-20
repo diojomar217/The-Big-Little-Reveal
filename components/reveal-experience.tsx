@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { Baby, Check, LockKeyhole, Mail, Sparkles, Users } from "lucide-react";
+import { Baby, Check, LockKeyhole, Mail, Maximize2, Pencil, Sparkles, Users, WifiOff } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import type { PublicState, VoteChoice } from "@/lib/reveal-types";
 
@@ -18,17 +18,18 @@ export function RevealExperience({ eventCode, initialState = emptyState, project
   const [projector, setProjector] = useState(projectorMode);
   const [joinUrl, setJoinUrl] = useState(initialJoinUrl);
   const [now, setNow] = useState(Date.now());
+  const [connected, setConnected] = useState(true);
+  const [editingVote, setEditingVote] = useState(false);
 
   const loadState = useCallback(async () => {
     try {
       const response = await fetch(`/api/events/${eventCode}/state`, { cache: "no-store" });
-      if (!response.ok) return;
+      if (!response.ok) { setConnected(false); return; }
       const next = await response.json() as PublicState;
       setState(next);
+      setConnected(true);
       if (next.yourVote) setChoice(next.yourVote);
-    } catch {
-      // Keep the last known event state during a brief connection interruption.
-    }
+    } catch { setConnected(false); }
   }, [eventCode]);
 
   const submitVote = useCallback(async (voteChoice?: VoteChoice, voteName?: string) => {
@@ -38,7 +39,7 @@ export function RevealExperience({ eventCode, initialState = emptyState, project
     const response = await fetch(`/api/events/${eventCode}/vote`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ choice: selected, name: voteName ?? name }) });
     const data = await response.json() as PublicState & { error?: string }; setBusy(false);
     if (!response.ok) { setMessage(data.error || "Your vote could not be saved."); throw new Error(data.error); }
-    setChoice(selected); setState(data); setMessage("Your prediction is in!");
+    setChoice(selected); setState(data); setMessage("Your prediction is in!"); setEditingVote(false); setConnected(true);
     return { saved: true, choice: selected, totalVotes: data.total };
   }, [choice, eventCode, name]);
 
@@ -56,6 +57,14 @@ export function RevealExperience({ eventCode, initialState = emptyState, project
     }, { signal: lifecycle.signal })).catch(() => undefined);
     return () => lifecycle.abort();
   }, [state.status, submitVote]);
+  useEffect(() => {
+    if (!projector || !("wakeLock" in navigator)) return;
+    let lock: { release: () => Promise<void> } | null = null;
+    void (navigator as Navigator & { wakeLock: { request: (type: "screen") => Promise<{ release: () => Promise<void> }> } }).wakeLock.request("screen").then((value) => { lock = value; }).catch(() => undefined);
+    return () => { void lock?.release(); };
+  }, [projector]);
+
+  async function enterFullscreen() { if (!document.fullscreenElement) await document.documentElement.requestFullscreen().catch(() => undefined); else await document.exitFullscreen().catch(() => undefined); }
 
   const girlPercent = state.total ? Math.round((state.votes.girl / state.total) * 100) : 50;
   const remainingMs = state.revealAt ? Math.max(0, Date.parse(state.revealAt) - now) : 9000;
@@ -69,17 +78,17 @@ export function RevealExperience({ eventCode, initialState = emptyState, project
     return <main className={`reveal-screen ${state.gender}`}>{confetti.map((piece, index) => <i key={index} className="confetti" style={{ "--x": piece.x, "--c": piece.color, "--d": piece.duration, "--delay": piece.delay, "--r": piece.rotation } as CSSProperties} />)}<div className="reveal-copy"><Sparkles size={46} aria-hidden="true" /><p>The secret is out</p><h2>{headline}</h2><p>Our hearts just got a little fuller.</p></div></main>;
   }
 
-  if (projector && state.status === "standby") return <main className="projector-page"><div className="projector-content projector-lobby"><div><p className="eyebrow">The Big Little Reveal</p><h1>{state.title}</h1><h2>Scan to join</h2><p>Open the camera on your phone and scan the code.</p><code>{joinUrl}</code><div className="projector-status"><span className="pulse-dot" /> Waiting for voting to start</div></div>{joinUrl && <div className="projector-qr"><QRCodeSVG value={joinUrl} size={260} bgColor="#ffffff" fgColor="#252525" level="M" /></div>}</div></main>;
-  if (projector) return <main className="projector-page"><div className="projector-content"><p className="eyebrow">Live crowd prediction</p><h1>What do you think?</h1><div className="projector-score"><span>Team Girl <b>{girlPercent}%</b></span><span>Team Boy <b>{100 - girlPercent}%</b></span></div><div className="meter projector-meter"><span className="meter-girl" style={{ width: `${girlPercent}%` }} /><span className="meter-boy" style={{ width: `${100 - girlPercent}%` }} /></div><p>{state.total} predictions</p><div className="projector-status"><span className="pulse-dot" /> {state.status === "locked" ? "Voting is closed. Get ready." : "Voting is live"}</div></div></main>;
+  if (projector && state.status === "standby") return <main className="projector-page"><button className="projector-tool" onClick={() => void enterFullscreen()} aria-label="Enter full screen"><Maximize2 /></button><div className="projector-content projector-lobby"><div><p className="eyebrow">The Big Little Reveal</p><h1>{state.title}</h1><h2>Scan to join</h2><p>Open the camera on your phone and scan the code.</p><code>{joinUrl}</code><div className={`projector-status ${connected ? "" : "disconnected"}`}>{connected ? <span className="pulse-dot" /> : <WifiOff size={18} />} {connected ? "Waiting for voting to start" : "Reconnecting to the event"}</div></div>{joinUrl && <div className="projector-qr"><QRCodeSVG value={joinUrl} size={260} bgColor="#ffffff" fgColor="#252525" level="M" /></div>}</div></main>;
+  if (projector) return <main className="projector-page"><button className="projector-tool" onClick={() => void enterFullscreen()} aria-label="Enter full screen"><Maximize2 /></button><div className="projector-content"><p className="eyebrow">Live crowd prediction</p><h1>What do you think?</h1><div className="projector-score"><span>Team Girl <b>{girlPercent}%</b></span><span>Team Boy <b>{100 - girlPercent}%</b></span></div><div className="meter projector-meter"><span className="meter-girl" style={{ width: `${girlPercent}%` }} /><span className="meter-boy" style={{ width: `${100 - girlPercent}%` }} /></div><p>{state.total} predictions</p><div className={`projector-status ${connected ? "" : "disconnected"}`}>{connected ? <span className="pulse-dot" /> : <WifiOff size={18} />} {!connected ? "Reconnecting" : state.status === "locked" ? "Voting is closed. Get ready." : "Voting is live"}</div></div></main>;
 
-  if (state.status === "standby") return <main className="party-page"><div className="site-shell"><header className="site-header"><Link className="brand" href="/"><span className="brand-mark"><Baby size={20} /></span><span>The Big Little Reveal</span></Link><span className="event-code">{eventCode}</span></header><section className="lobby-stage"><div className="lobby-icon"><Users size={42} /></div><p className="eyebrow">You’re in · The celebration starts here</p><h1 className="lobby-title">{state.title}</h1><h2>Voting starts soon.</h2><p>Keep this page open. The prediction will appear here when the organizer starts the poll.</p><div className="lobby-status"><span className="pulse-dot" /> Waiting for the host</div></section></div></main>;
+  if (state.status === "standby") return <main className="party-page"><div className="site-shell"><header className="site-header"><Link className="brand" href="/"><span className="brand-mark"><Baby size={20} /></span><span>The Big Little Reveal</span></Link><span className="event-code">{eventCode}</span></header>{!connected && <div className="connection-banner"><WifiOff size={17} /> Reconnecting. Keep this page open.</div>}<section className="lobby-stage"><div className="lobby-icon"><Users size={42} /></div><p className="eyebrow">You’re in · The celebration starts here</p><h1 className="lobby-title">{state.title}</h1><h2>Voting starts soon.</h2><p>Keep this page open. The prediction will appear here when the organizer starts the poll.</p><div className="lobby-status"><span className="pulse-dot" /> Waiting for the host</div></section></div></main>;
 
   const locked = state.status === "locked";
   return <main className="party-page"><div className="site-shell">
     <header className="site-header"><Link className="brand" href="/"><span className="brand-mark"><Baby size={20} /></span><span>The Big Little Reveal</span></Link><span className="event-code">{eventCode}</span></header>
-    <section className="main-stage"><div className="intro"><p className="eyebrow">One tiny secret. Two big teams.</p><h1>{state.title}</h1><p className="event-kicker">The Big Little Reveal</p><p className="intro-copy">The moment is almost here. Make your prediction, cheer for your team, and keep this page open when the reveal begins.</p></div>
+    {!connected && <div className="connection-banner"><WifiOff size={17} /> Reconnecting. Your saved vote is safe.</div>}<section className="main-stage"><div className="intro"><p className="eyebrow">One tiny secret. Two big teams.</p><h1>{state.title}</h1><p className="event-kicker">The Big Little Reveal</p><p className="intro-copy">The moment is almost here. Make your prediction, cheer for your team, and keep this page open when the reveal begins.</p></div>
       <section className="vote-panel" aria-labelledby="vote-heading"><p className="eyebrow">{locked ? "Predictions are in" : "Make your prediction"}</p><h2 id="vote-heading">{locked ? "Voting is now closed." : "Which team are you on?"}</h2><p className="sub">{locked ? "Stay right here. The countdown will begin shortly." : "You can change your answer right up until voting closes."}</p>
-        {!locked && <><div className="team-grid"><button className="team-button girl" data-selected={choice === "girl"} onClick={() => setChoice("girl")} aria-pressed={choice === "girl"}><Sparkles size={27} /><strong>Team Girl</strong></button><button className="team-button boy" data-selected={choice === "boy"} onClick={() => setChoice("boy")} aria-pressed={choice === "boy"}><Sparkles size={27} /><strong>Team Boy</strong></button></div><label className="sr-only" htmlFor="guest-name">Your first name, optional</label><input id="guest-name" className="name-field" value={name} onChange={(event) => setName(event.target.value)} maxLength={40} placeholder="Your first name (optional)" /><button className="primary-action" disabled={busy || !choice} onClick={() => void submitVote()}>{busy ? "Saving…" : state.yourVote ? "Update my prediction" : "Lock in my prediction"}</button><p className="status-message" aria-live="polite">{message && <><Check size={17} className="inline" /> {message}</>}</p></>}
+        {!locked && state.yourVote && !editingVote ? <div className={`vote-confirmation ${state.yourVote}`}><Check size={30} /><p>Your prediction is locked in</p><strong>Team {state.yourVote === "girl" ? "Girl" : "Boy"}</strong><button onClick={() => setEditingVote(true)}><Pencil size={16} /> Edit prediction</button></div> : !locked && <><div className="team-grid"><button className="team-button girl" data-selected={choice === "girl"} onClick={() => setChoice("girl")} aria-pressed={choice === "girl"}><Sparkles size={27} /><strong>Team Girl</strong></button><button className="team-button boy" data-selected={choice === "boy"} onClick={() => setChoice("boy")} aria-pressed={choice === "boy"}><Sparkles size={27} /><strong>Team Boy</strong></button></div><label className="sr-only" htmlFor="guest-name">Your first name, optional</label><input id="guest-name" className="name-field" value={name} onChange={(event) => setName(event.target.value)} maxLength={40} placeholder="Your first name (optional)" /><button className="primary-action" disabled={busy || !choice || !connected} onClick={() => void submitVote()}>{busy ? "Saving…" : state.yourVote ? "Update my prediction" : "Lock in my prediction"}</button><p className="status-message" aria-live="polite">{message && <><Check size={17} className="inline" /> {message}</>}</p></>}
         {locked && <div className="locked-badge"><LockKeyhole size={30} /><strong>Predictions locked</strong></div>}
         <div className="meter-wrap" aria-label={`${girlPercent}% Team Girl and ${100 - girlPercent}% Team Boy`}><div className="meter-labels"><span>Girl {girlPercent}%</span><span>Boy {100 - girlPercent}%</span></div><div className="meter"><span className="meter-girl" style={{ width: `${girlPercent}%` }} /><span className="meter-boy" style={{ width: `${100 - girlPercent}%` }} /></div><p className="vote-total">{state.total} {state.total === 1 ? "prediction" : "predictions"} and counting</p></div><p className="waiting-note"><span className="pulse-dot" /> Waiting for the organizer’s cue</p>
       </section>
