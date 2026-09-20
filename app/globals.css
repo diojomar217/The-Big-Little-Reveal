@@ -128,10 +128,25 @@ button, input { font: inherit; }
 .lobby-stage > p:not(.eyebrow) { max-width: 600px; margin: 22px auto; font-size: clamp(1rem,2.2vw,1.3rem); line-height: 1.55; font-weight: 700; }
 .lobby-icon { width: 86px; height: 86px; display: grid; place-items: center; margin-bottom: 24px; border: 2px solid #252525; background: #ffd65a; box-shadow: 6px 6px 0 #252525; transform: rotate(-4deg); }
 .lobby-status { display: inline-flex; align-items: center; gap: 9px; padding: 11px 15px; border: 2px solid #252525; background: white; font-weight: 900; }
+.sound-toggle { position: fixed; z-index: 70; top: 20px; left: 20px; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; border: 2px solid #252525; background: white; color: #252525; box-shadow: 3px 3px 0 #252525; font-size: .78rem; font-weight: 900; cursor: pointer; }
+.sound-toggle svg { width: 19px; height: 19px; }
+.party-page > .sound-toggle { top: auto; bottom: 20px; }
+.ready-screen, .flash-screen { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; align-content: center; gap: 14px; overflow: hidden; text-align: center; }
+.ready-screen { background: #252525; color: white; }
+.ready-screen p, .ready-screen span { margin: 0; font-weight: 900; text-transform: uppercase; }
+.ready-screen h2 { max-width: 1100px; margin: 0; font-size: clamp(4rem,13vw,11rem); line-height: .82; text-transform: uppercase; animation: revealIn .55s ease both; }
+.ready-screen span { color: #ffd65a; }
+.flash-screen { background: white; color: #252525; animation: revealFlash 1s ease-out both; }
+.flash-screen > svg { width: clamp(80px,18vw,180px); height: auto; }
 .countdown-screen { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; align-content: center; gap: 10px; overflow: hidden; background: #ffd65a; color: #252525; text-align: center; }
 .countdown-screen p, .countdown-screen span { margin: 0; font-weight: 900; text-transform: uppercase; }
 .countdown-screen strong { font-size: clamp(10rem,35vw,28rem); line-height: .8; animation: countPop .8s ease both; }
 .suspense-screen { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; align-content: center; gap: 18px; overflow: hidden; background: #252525; color: white; text-align: center; animation: suspensePulse 1.15s ease-in-out infinite; }
+.suspense-screen.classic { animation: none; }
+.suspense-screen.classic .suspense-ring { display: none; }
+.countdown-screen.confetti { background: #ffda4f; }
+.countdown-screen.confetti strong { text-shadow: 8px 8px 0 white; }
+.suspense-screen.confetti { background: #176f78; }
 .suspense-screen p { z-index: 2; margin: 0; font-size: clamp(2rem,7vw,5rem); font-weight: 900; text-transform: uppercase; }
 .suspense-screen span { z-index: 2; font-size: clamp(.9rem,2vw,1.25rem); font-weight: 800; text-transform: uppercase; }
 .suspense-envelope { z-index: 2; width: clamp(92px,16vw,180px); height: auto; color: #ffd65a; filter: drop-shadow(7px 7px 0 #ed604c); animation: envelopeShake .55s ease-in-out infinite; }
@@ -175,6 +190,13 @@ button, input { font: inherit; }
 .console-callout span { margin-top: 3px; color: #625e58; font-size: .85rem; line-height: 1.45; }
 .admin-panel label { display: block; margin: 22px 0 8px; font-weight: 900; }
 .admin-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.reveal-style-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 22px; }
+.style-choice { min-height: 78px; padding: 13px; border: 2px solid #252525; background: white; color: #252525; text-align: left; cursor: pointer; }
+.style-choice strong, .style-choice span { display: block; }
+.style-choice strong { margin-bottom: 5px; font-size: .9rem; }
+.style-choice span { color: #6f6961; font-size: .74rem; font-weight: 800; }
+.style-choice[data-active="true"] { background: #ffd65a; box-shadow: 4px 4px 0 #252525; }
+.style-choice:disabled { cursor: not-allowed; opacity: .65; }
 .admin-choice { min-height: 72px; border: 2px solid #252525; background: white; font-weight: 900; cursor: pointer; }
 .admin-choice span, .admin-choice small { display: block; }
 .admin-choice small { margin-top: 4px; color: #6f6961; font-size: .68rem; }
@@ -198,6 +220,7 @@ button, input { font: inherit; }
 .poll-action { width: 100%; min-height: 58px; display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 14px; border: 2px solid #252525; background: #252525; color: white; font-weight: 900; cursor: pointer; box-shadow: 5px 5px 0 #ffd65a; }
 .poll-action:disabled { opacity: .45; cursor: not-allowed; }
 .secondary-controls { grid-template-columns: repeat(2,1fr); }
+.replay-action { background: #ffd65a !important; }
 .control-button { min-height: 68px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; border: 2px solid #252525; background: white; font-weight: 900; cursor: pointer; }
 .control-button:hover { background: #f1f7fb; } .control-button:disabled { opacity: .45; cursor: not-allowed; }
 .share-panel { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 28px; margin-top: 28px; border: 2px solid #252525; background: #ffd65a; padding: clamp(22px,4vw,34px); box-shadow: 8px 8px 0 #252525; }
@@ -210,6 +233,9 @@ button, input { font: inherit; }
 .rehearsal-overlay.girl { background: #ff8f7c; } .rehearsal-overlay.boy { background: #83d3f5; }
 .rehearsal-overlay.twins { background: linear-gradient(110deg,#ff8f7c 0 49%,#ffd65a 49% 51%,#83d3f5 51%); }
 .rehearsal-overlay.rehearsal-suspense { background: #252525; color: white; animation: suspensePulse 1.15s ease-in-out infinite; }
+.rehearsal-overlay.rehearsal-ready { background: #252525; color: white; }
+.rehearsal-overlay.rehearsal-ready h2 { color: white; text-shadow: none; }
+.rehearsal-overlay.rehearsal-flash { background: white; color: #252525; animation: revealFlash 1s ease-out both; }
 .rehearsal-overlay > button { position: absolute; top: 24px; right: 24px; width: 48px; height: 48px; display: grid; place-items: center; border: 2px solid #252525; background: white; color: #252525; cursor: pointer; }
 .rehearsal-overlay p, .rehearsal-overlay span { margin: 0; font-weight: 900; text-transform: uppercase; }
 .rehearsal-overlay strong { font-size: clamp(9rem,30vw,24rem); line-height: .8; animation: countPop .8s ease both; }
@@ -222,6 +248,7 @@ button, input { font: inherit; }
 @keyframes envelopeShake { 0%,100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(4deg) scale(1.06); } }
 @keyframes ringExpand { from { transform: scale(.35); opacity: .55; } to { transform: scale(1.3); opacity: 0; } }
 @keyframes suspensePulse { 50% { background-color: #343434; } }
+@keyframes revealFlash { 0% { background: #252525; color: white; } 32% { background: white; color: white; } 100% { background: white; color: #252525; } }
 @keyframes armPulse { to { transform: scale(1.012); } }
 @media (min-width: 900px) and (min-aspect-ratio: 16/10) {
   .projector-page { height: 100svh; min-height: 0; padding: clamp(24px,3vw,48px); overflow: hidden; }
@@ -252,7 +279,7 @@ button, input { font: inherit; }
 @media (max-width: 440px) {
   .site-shell { width: min(100% - 22px,1120px); } .site-header { min-height: 62px; }
   .main-stage { min-height: calc(100svh - 62px); gap: 28px; padding: 32px 0 54px; }
-  .team-button { min-height: 96px; } .admin-options { grid-template-columns: 1fr; }
+  .team-button { min-height: 96px; } .admin-options, .reveal-style-options { grid-template-columns: 1fr; }
   .control-actions { grid-template-columns: 1fr; }
   .share-panel { grid-template-columns: 1fr; text-align: center; }
   .qr-frame { justify-self: center; }
